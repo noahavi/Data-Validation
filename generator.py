@@ -74,13 +74,13 @@ def test_uniques(data, test_data):
     ) as test_dataset:
         # Each date is added to set if valid format
         # Set holds only unique values
-        dataset = set(line.strip() for line in dataset if check_format(line.strip()))
+        dataset = set(line.strip() for line in dataset if check_format2(line.strip()))
         # Test holds all the dates that must be validated
         test = list(line.strip() for line in test_dataset)
         valid = []
         # Any date that is in both test and set1 should be valid and unique
         for date in test:
-            if date in dataset:
+            if date in dataset and date not in valid:
                 valid.append(date)  # List of valid and unique dates
         # Checks if each list contains the same values as the other
         # If test contains all elements from valid, then all elements of test are valid and unique dates
@@ -90,28 +90,70 @@ def test_uniques(data, test_data):
             return False
 
 
+def assign_names(date):
+    split_date = (
+        date.replace("-", "T")
+        .replace(":", "T")
+        .replace("+", "T")
+        .replace("-", "T")
+        .replace("Z", "T")
+        .split("T")
+    )
+    for i, val in enumerate(split_date):
+        if i == 0:
+            year = val
+            continue
+        if i == 1:
+            month = val
+            continue
+        if i == 2:
+            day = val
+            continue
+        if i == 3:
+            hour = val
+            continue
+        if i == 4:
+            minute = val
+            continue
+        if i == 5:
+            second = val
+            continue
+
+    return year, month, day, hour, minute, second
+
+
 def check_format2(date):
+    template = "YYYY-MM-DDThh:mm:ssTZD"
     # First check for "T", colons and hypens to be in correct indices
-    if date[10:11] != "T":
-        return False
-    if date[4:5] != "-" and date[7:8] != "-":
-        return False
-    if date[13:14] != ":" and date[16:17] != ":":
+    t_index = template.index("T")
+    hyp_index = template.index("-")
+    colon_index = template.index(":")
+    if date[t_index : t_index + 1] != "T":
         return False
     if (
-        not date[0:4].isdigit()  # First 4 digits for year
-        or not date[5:7].isdigit()
-        and int(date[5:7]) in range(1, 13)  # Month in range 1-12
-        or not date[8:10].isdigit()
-        and int(date[8:10]) in range(1, 32)  # Day in range 1 - 31
-        or not date[11:13].isdigit()
-        and int(date[11:13]) in range(0, 25)  # Hours in range 0-24
-        or not date[14:16].isdigit()
-        and int(date[14:16]) in range(0, 61)  # Minutes in range 0-60
-        or not date[17:19].isdigit()
-        and int(date[17:19]) in range(0, 61)  # Seconds in range 0-60
+        date[hyp_index : hyp_index + 1] != "-"
+        and date[hyp_index : hyp_index + 1] != "-"
     ):
-        print(date)
+        return False
+    if (
+        date[colon_index : colon_index + 1] != ":"
+        and date[colon_index : colon_index + 1] != ":"
+    ):
+        return False
+    year, month, day, hour, minute, second = assign_names(date)
+    if (
+        not year.isdigit()  # First 4 digits for year
+        or not month.isdigit()
+        and int(month) in range(1, 13)  # Month in range 1-12
+        or not day.isdigit()
+        and int(day) in range(1, 32)  # Day in range 1 - 31
+        or not hour.isdigit()
+        and int(hour) in range(0, 25)  # Hours in range 0-24
+        or not minute.isdigit()
+        and int(minute) in range(0, 61)  # Minutes in range 0-60
+        or not second.isdigit()
+        and int(second) in range(0, 61)  # Seconds in range 0-60
+    ):
         return False
     # Timezone
     if date[19:20] == "+" or date[19:20] == "-":
@@ -125,7 +167,8 @@ def check_format2(date):
             return False
         if (
             # Timezone minutes can only be 00,45,30
-            int(date[23:25]) != 00
+            date[20:22].isdigit()
+            and int(date[23:25]) != 00
             and int(date[23:25]) != 45
             and int(date[23:25]) != 30
             and int(date[23:25]) != 60
@@ -158,7 +201,7 @@ def validation(dataset, test):
 def main():
     # Size of generated dataset as arg
     dataset, test = generate_dataset(
-        10000
+        1000
     )  # Returns file names for dataset and test dataset
     validation(dataset, test)
     # validation("data.txt", "data_test.txt")
